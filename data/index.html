@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>RGB Slider</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<body>
+
+    <div class="card">
+        <h2>Distance Sensor</h2>
+        <p class="distance"> <span id="distance">%DISTANCE%</span> cm</p>
+    </div>
+
+    <div>
+
+    </div>
+
+    <div class="card">
+        <h2>RGB Slider Control</h2>
+
+        <label for="sliderRed">Red</label>
+        <input type="range" min="0" max="255" value="0" id="sliderRed">
+        <p>RED: <input type="number" id="valueRed" value="0" readonly></p>
+
+        <label for="sliderGreen">Green</label>
+        <input type="range" min="0" max="255" value="0" id="sliderGreen">
+        <p>GREEN: <input type="number" id="valueGreen" value="0" readonly></p>
+
+        <label for="sliderBlue">Blue</label>
+        <input type="range" min="0" max="255" value="0" id="sliderBlue">
+        <p>BLUE: <input type="number" id="valueBlue" value="0" readonly></p>
+        <div class="color-preview" id="colorPreview"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
