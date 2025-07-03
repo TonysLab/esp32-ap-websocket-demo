@@ -1,13 +1,39 @@
-#include <Arduino.h>
-#include <WiFi.h>
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include "LittleFS.h"
+/*
+  MIT License
+
+  Copyright (c) 2025 Tony's Lab
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the “Software”), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  THE SOFTWARE.
+*/
+
+#include <Arduino.h>             // Core Arduino functionality (GPIO, timing, Serial, etc.)
+#include <WiFi.h>                // ESP32 Wi-Fi management (AP and Station modes)
+#include "LittleFS.h"            // Flash-based file system for serving website files
+#include <AsyncTCP.h>            // Non-blocking TCP library for asynchronous networking
+#include <ESPAsyncWebServer.h>   // Asynchronous HTTP and WebSocket server built on AsyncTCP
 
 #define trigPin 2
 #define echoPin 1
 
-// Setting The AP Mode Credential
+// Configure SoftAP settings and network parameters:
+// - SSID, password, channel, visibility, and max clients
+// - Static IP, gateway, and subnet mask for hosting the web server
 #define         AP_SSID               "TonysLab"
 #define         AP_PASS               "TonysLab"
 #define         AP_CHANNEL            1
@@ -40,9 +66,13 @@ void initLittleFS() {
   file.close();
 }
 
+// Send WebSocket
 void notifyClients(String MESSAGE) {
   ws.textAll(MESSAGE);
 }
+
+// Process incoming WebSocket text messages
+// Parse "RGB:" commands, and update the RGB LED color accordingly
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
   AwsFrameInfo *info = (AwsFrameInfo*)arg;
@@ -70,7 +100,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
   }
 }
 
-// Cases to happen on certain Events
+// Cases to happen on certain Wi-Fi Events
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
   switch (type) {
     case WS_EVT_CONNECT:
@@ -88,11 +118,18 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   }
 }
 
+// Initialize the WebSocket endpoint used by the website’s JavaScript:
+// This registers the “/ws” path so that client-side code can open a WebSocket
+// connection to receive and send messages in real time via the onEvent handler.
 void initWebSocket() {
   ws.onEvent(onEvent);
   server.addHandler(&ws);
 }
 
+
+// Sends a trigger pulse to the ultrasonic sensor, measures the echo return time,
+// calculates the distance in centimeters based on the speed of sound,
+// prints the measured distance, and returns it.
 int Read_Distance(){
   long duration, distance;
   digitalWrite(trigPin, LOW);
@@ -101,7 +138,7 @@ int Read_Distance(){
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
   duration = pulseIn(echoPin, HIGH);
-  distance = (duration/2) / 29.1;
+  distance = (duration / 2) / 29.1;
   Serial.println("distance: ");
   Serial.println(distance);
   return distance;
@@ -116,8 +153,8 @@ void setup() {
 
   initLittleFS();
   
-  WiFi.softAPConfig(local_IP, gateway, subnet);
-  WiFi.softAP(AP_SSID, AP_PASS, AP_CHANNEL, AP_HIDDEN, AP_MAX_CON);
+  WiFi.softAPConfig(local_IP, gateway, subnet); // Apply the static network configuration for the ESP32 SoftAP
+  WiFi.softAP(AP_SSID, AP_PASS, AP_CHANNEL, AP_HIDDEN, AP_MAX_CON); // Launch the SoftAP with specified credentials and settings
   Serial.print("IP address for network ");
   Serial.print(AP_SSID);
   Serial.print(" : ");
@@ -125,10 +162,10 @@ void setup() {
   Serial.println("\n");
   initWebSocket();
 
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) { // Serve the main page on HTTP GET requests to "/"
     request->send(LittleFS, "/index.html", "text/html");
   });
-  server.serveStatic("/", LittleFS, "/");
+  server.serveStatic("/", LittleFS, "/"); // Serve all other static assets (JS, CSS, images) from LittleFS
   server.begin();
 }
 
